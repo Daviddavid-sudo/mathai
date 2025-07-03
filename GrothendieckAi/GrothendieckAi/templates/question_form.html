@@ -1,56 +1,55 @@
-{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Math Q&A</title>
-    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <title>Math QA</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 40px;
-        }
-        textarea {
-            width: 100%;
-            height: 100px;
-            font-size: 16px;
-        }
-        .chunk {
-            background-color: #f8f9fa;
-            border: 1px solid #ccc;
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 6px;
-        }
-        .answer {
-            background-color: #e6ffe6;
-            padding: 15px;
-            border: 1px solid #b3ffb3;
-            border-radius: 6px;
-            margin-top: 20px;
-        }
+        body { font-family: 'Helvetica Neue', sans-serif; padding: 2rem; max-width: 800px; margin: auto; }
+        .question-form { margin-bottom: 2rem; }
+        textarea { width: 100%; padding: 0.5rem; font-size: 1rem; }
+        .answer-box { background: #f0f0f0; padding: 1rem; border-radius: 8px; white-space: pre-wrap; }
+        .chunks { margin-top: 1rem; font-size: 0.9rem; color: #444; }
     </style>
+
+    <!-- ✅ MathJax CDN (v3) -->
+    <script>
+    window.MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['\\[', '\\]'], ['$$', '$$']]
+        },
+        svg: { fontCache: 'global' }
+    };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
 </head>
 <body>
+
     <h1>Ask a Math Question</h1>
 
-    <form method="post">
+    <form method="POST" class="question-form">
         {% csrf_token %}
-        <label for="question">Enter your question:</label><br>
-        <textarea name="question" id="question" required>{{ question }}</textarea><br><br>
-        <button type="submit">Submit</button>
+        <textarea name="question" rows="3" placeholder="What is a K3 surface?">{{ question }}</textarea><br>
+        <button type="submit">Ask</button>
     </form>
 
-    {% if retrieved_chunks %}
-        <h2>🔍 Retrieved Chunks:</h2>
-        {% for chunk in retrieved_chunks %}
-            <div class="chunk">{{ chunk|linebreaksbr }}</div>
-        {% endfor %}
+    {% if answer %}
+        <h2>Answer</h2>
+        <div class="answer-box">
+            {{ answer|safe }}
+        </div>
     {% endif %}
 
-    {% if answer %}
-        <h2>🤖 Answer:</h2>
-        <div class="answer">{{ answer|safe }}</div>
+    {% if retrieved_chunks %}
+        <h3>Retrieved Chunks:</h3>
+        <div class="chunks">
+            <ul>
+                {% for chunk in retrieved_chunks %}
+                    <li>{{ chunk|truncatechars:300 }}</li>
+                {% endfor %}
+            </ul>
+        </div>
     {% endif %}
+
 </body>
 </html>

@@ -1,15 +1,18 @@
 from django.shortcuts import render
 from .forms import MathQuestionForm
-from .utils.query_llama import load_index_and_texts, query_ollama_llama32, search_index, fix_math_latex_with_llama, embed_query
+from .utils.query_llama import (
+    load_index_and_texts,
+    query_ollama_with_context_and_question,
+    search_index,
+    embed_query,
+    INDEX_PATH,
+    TEXTS_PATH
+)
 import os
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-INDEX_PATH = os.path.join(BASE_DIR, "faiss_index.index")
-TEXTS_PATH = os.path.join(BASE_DIR, "index_texts.txt")
 
 OLLAMA_MODEL = "llama3.2"
 
+# Load index and texts once at module load
 index, texts = load_index_and_texts(index_path=INDEX_PATH, texts_path=TEXTS_PATH)
 
 def math_qa_view(request):
@@ -38,14 +41,11 @@ def math_qa_view(request):
             if retrieved_chunks:
                 print("\n--- Retrieved Chunks ---")
                 for i, chunk in enumerate(retrieved_chunks, start=1):
-                    print(f"Chunk {i}: {chunk[:500]}...")  # print first 500 chars for brevity
-                raw_answer = query_ollama_llama32(retrieved_chunks, question)
+                    print(f"Chunk {i}: {chunk[:500]}...")  # first 500 chars
+                raw_answer = query_ollama_with_context_and_question(retrieved_chunks, question)
                 print("\n--- Raw Answer ---")
                 print(raw_answer)
-                fixed_answer = fix_math_latex_with_llama(raw_answer, model_name=OLLAMA_MODEL)
-                print("\n--- Fixed Answer ---")
-                print(fixed_answer)
-                answer = fixed_answer
+                answer = raw_answer
             else:
                 answer = "No relevant context found in the index."
 
@@ -53,10 +53,10 @@ def math_qa_view(request):
             answer = "Error loading index or no question provided."
 
     print("✅ Rendering template.")
+    print(f"✅ Rendering template with question: {question}, answer: {answer}, chunks count: {len(retrieved_chunks)}")
+
     return render(request, 'question_form.html', {
         'question': question,
         'answer': answer,
         'retrieved_chunks': retrieved_chunks,
     })
-
-
