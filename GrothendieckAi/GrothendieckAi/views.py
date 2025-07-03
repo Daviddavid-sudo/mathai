@@ -59,4 +59,5 @@ def math_qa_view(request):
         'question': question,
         'answer': answer,
         'retrieved_chunks': retrieved_chunks,
+        'pdf_url': '/media/K3Global.pdf',
     })
