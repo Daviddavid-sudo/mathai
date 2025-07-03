@@ -11,18 +11,6 @@
         ul.pages-list li { display: inline; margin-right: 1rem; }
         ul.pages-list li a { cursor: pointer; text-decoration: underline; color: blue; }
     </style>
-
-    <!-- MathJax for LaTeX rendering -->
-    <script>
-    window.MathJax = {
-        tex: {
-            inlineMath: [['$', '$'], ['\\(', '\\)']],
-            displayMath: [['\\[', '\\]'], ['$$', '$$']]
-        },
-        svg: { fontCache: 'global' }
-    };
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
 </head>
 <body>
 
@@ -34,10 +22,12 @@
         <button type="submit">Ask</button>
     </form>
 
-    {% if relevant_page %}
-        <h3>Relevant PDF Page</h3>
+    {% if relevant_pages %}
+        <h3>Relevant PDF Pages</h3>
         <ul class="pages-list">
-            <li><a onclick="jumpToPage({{ relevant_page }}); return false;">Page {{ relevant_page }}</a></li>
+            {% for page in relevant_pages %}
+                <li><a onclick="jumpToPage({{ page }}); return false;">Page {{ page }}</a></li>
+            {% endfor %}
         </ul>
     {% endif %}
 
@@ -55,15 +45,7 @@
         const iframe = document.getElementById('pdf-frame');
         iframe.src = "{{ pdf_url }}" + "#page=" + page;
     }
-
-    // 🔁 Automatically jump on page load if relevant_page is available
-    {% if relevant_page %}
-        window.onload = function () {
-            jumpToPage({{ relevant_page }});
-        };
-    {% endif %}
 </script>
-
 
 </body>
 </html>

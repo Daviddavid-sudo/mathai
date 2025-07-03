@@ -8,7 +8,6 @@ import re
 import subprocess
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
 INDEX_PATH = os.path.join(BASE_DIR, "faiss_index.index")
 TEXTS_PATH = os.path.join(BASE_DIR, "index_chunks.json")
 
@@ -51,20 +50,7 @@ def search_index(query_embedding, index, k=5):
     return I[0]
 
 def call_llama3_2(prompt: str) -> str:
-    """
-    Calls local LLaMA 3.2 model via Ollama CLI and returns generated text.
-    Adjust the call to pass the prompt correctly.
-    """
     try:
-        # Option 1: pass prompt as argument (may fail if prompt is too long)
-        # result = subprocess.run(
-        #     ["ollama", "run", "llama3.2", prompt],
-        #     capture_output=True,
-        #     text=True,
-        #     timeout=30
-        # )
-        
-        # Option 2: pass prompt via stdin (recommended for long prompts)
         result = subprocess.run(
             ["ollama", "run", "llama3.2"],
             input=prompt,
@@ -72,7 +58,6 @@ def call_llama3_2(prompt: str) -> str:
             text=True,
             timeout=60
         )
-        
         if result.returncode != 0:
             print(f"❌ Ollama CLI error: {result.stderr}")
             return ""
@@ -81,50 +66,51 @@ def call_llama3_2(prompt: str) -> str:
         print(f"❌ Exception running llama3.2 CLI: {e}")
         return ""
 
+def llama_select_relevant_chunks(question, candidates):
+    prompt = (
+        f"You are a helpful AI assistant. A user asks the question:\n\n"
+        f"\"{question}\"\n\n"
+        f"You are given several chunks of text from a document. For each chunk, reply YES if it likely helps answer the question, otherwise reply NO.\n\n"
+        f"Respond using the following format:\n"
+        f"Chunk 0: YES\nChunk 1: NO\n...\n\n"
+    )
 
-def llama_select_best_chunk(question, candidates):
-    print("\n🔍 Top 5 Candidates:")
-    for i, c in enumerate(candidates):
-        print(f"\n--- Candidate {i} (Page {c.get('page', '?')}) ---\n{c['text'][:1000]}...\n")
-
-    prompt = f"You are a helpful assistant. A user asks: {question}\n\n"
-    prompt += "Here are 5 text chunks from a document:\n"
     for i, chunk in enumerate(candidates):
-        snippet = chunk['text'][:1000].replace("\n", " ").strip()
-        prompt += f"\nChunk {i} (Page {chunk.get('page', '?')}): {snippet}"
-    prompt += "\n\nPlease reply only with the number of the chunk that best answers the question."
-
-    print("\n🧠 Prompt Preview:\n" + prompt[:1500] + "\n... [truncated]")
+        snippet = chunk["text"][:800].replace("\n", " ").strip()
+        prompt += f"Chunk {i} (Page {chunk.get('page', '?')}): {snippet}\n\n"
 
     response = call_llama3_2(prompt)
-    print("🤖 LLaMA Response:", response)
+    print("🤖 LLaMA Response:\n", response)
 
-    match = re.search(r"(\d+)", response)
-    if match:
-        idx = int(match.group(1))
-        if 0 <= idx < len(candidates):
-            return candidates[idx]
+    relevant_chunks = []
+    for i, chunk in enumerate(candidates):
+        # Updated regex to handle optional "(Page N)" and optional leading spaces
+        pattern = rf"^\s*Chunk {i}( \(Page \d+\))?:\s*(YES|NO)"
+        match = re.search(pattern, response, re.IGNORECASE | re.MULTILINE)
+        if match and match.group(2).strip().upper() == "YES":
+            relevant_chunks.append(chunk)
 
-    print("⚠️ Failed to parse a valid chunk number from LLaMA response, falling back to first candidate.")
-    return candidates[0]
+    return relevant_chunks
 
 def answer_question_pipeline(question):
     if index is None or not texts:
-        return "Error: FAISS index or texts not found.", [], None
+        return "Error: FAISS index or texts not found.", [], []
 
     query_embedding = embed_query(question)
     top_indices = search_index(query_embedding, index, k=5)
     candidates = [texts[i] for i in top_indices if i < len(texts)]
 
     if not candidates:
-        return "No relevant context found.", [], None
+        return "No relevant context found.", [], []
 
-    best_chunk = llama_select_best_chunk(question, candidates)
+    relevant_chunks = llama_select_relevant_chunks(question, candidates)
 
-    answer = f"Most relevant result is from page {best_chunk['page']}:\n\n{best_chunk['text']}"
-    return answer, [best_chunk['page']], best_chunk['text']
+    if not relevant_chunks:
+        return "No chunks were judged relevant.", [], []
 
+    answer = "\n\n".join([f"(Page {c['page']}):\n{c['text']}" for c in relevant_chunks])
+    page_list = [c['page'] for c in relevant_chunks]
+    return answer, page_list, relevant_chunks
 
 # Load index and texts at module level
 index, texts = load_index_and_texts()
-
