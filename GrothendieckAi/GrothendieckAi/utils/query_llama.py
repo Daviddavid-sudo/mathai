@@ -110,19 +110,20 @@ def llama_select_best_chunk(question, candidates):
 
 def answer_question_pipeline(question):
     if index is None or not texts:
-        return "Error: FAISS index or texts not found.", []
+        return "Error: FAISS index or texts not found.", [], None
 
     query_embedding = embed_query(question)
     top_indices = search_index(query_embedding, index, k=5)
     candidates = [texts[i] for i in top_indices if i < len(texts)]
 
     if not candidates:
-        return "No relevant context found.", []
+        return "No relevant context found.", [], None
 
     best_chunk = llama_select_best_chunk(question, candidates)
 
     answer = f"Most relevant result is from page {best_chunk['page']}:\n\n{best_chunk['text']}"
-    return answer, [best_chunk['page']]
+    return answer, [best_chunk['page']], best_chunk['text']
+
 
 # Load index and texts at module level
 index, texts = load_index_and_texts()
