@@ -1,0 +1,56 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Math Q&A</title>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            font-size: 16px;
+        }
+        .chunk {
+            background-color: #f8f9fa;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+        }
+        .answer {
+            background-color: #e6ffe6;
+            padding: 15px;
+            border: 1px solid #b3ffb3;
+            border-radius: 6px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Ask a Math Question</h1>
+
+    <form method="post">
+        {% csrf_token %}
+        <label for="question">Enter your question:</label><br>
+        <textarea name="question" id="question" required>{{ question }}</textarea><br><br>
+        <button type="submit">Submit</button>
+    </form>
+
+    {% if retrieved_chunks %}
+        <h2>🔍 Retrieved Chunks:</h2>
+        {% for chunk in retrieved_chunks %}
+            <div class="chunk">{{ chunk|linebreaksbr }}</div>
+        {% endfor %}
+    {% endif %}
+
+    {% if answer %}
+        <h2>🤖 Answer:</h2>
+        <div class="answer">{{ answer|safe }}</div>
+    {% endif %}
+</body>
+</html>
