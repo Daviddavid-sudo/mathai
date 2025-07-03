@@ -1,38 +1,46 @@
 import re
-from pathlib import Path
-from sentence_transformers import SentenceTransformer
-import faiss
+import json
 import numpy as np
+import faiss
+from sentence_transformers import SentenceTransformer
 
 # --- Config ---
-TEXT_PATH = "output_chunks.txt"               # The .txt version of your PDF
-INDEX_PATH = "faiss_index.index"
-TEXTS_OUT_PATH = "index_texts.txt"
-CHUNK_SIZE = 1000                     # Can tune this
-CHUNK_OVERLAP = 200                   # For continuity between chunks
-EMBED_MODEL = "all-MiniLM-L6-v2"      # Can swap later
+RAW_TEXT_PATH = "GrothendieckAi/GrothendieckAi/utils/output_chunks.txt"
+INDEX_PATH = "GrothendieckAi/GrothendieckAi/utils/faiss_index.index"
+CHUNKS_JSON_PATH = "GrothendieckAi/GrothendieckAi/utils/index_chunks.json"
 
-# --- Load and clean text ---
-def load_text(path):
+
+CHUNK_SIZE = 1000
+CHUNK_OVERLAP = 200
+EMBED_MODEL = "all-MiniLM-L6-v2"
+
+# --- Load raw text ---
+def load_raw_text(path):
     with open(path, "r", encoding="utf-8") as f:
-        text = f.read()
-    return clean_text(text)
+        return f.read()
 
-def clean_text(text):
-    # Normalize whitespace
+# --- Split into pages ---
+def split_into_pages(raw_text):
+    entries = raw_text.split('--- Page ')
+    pages = []
+    for entry in entries[1:]:
+        page_num_str, content = entry.split('---', 1)
+        page_num = int(page_num_str.strip())
+        pages.append({
+            "page": page_num,
+            "text": content.strip()
+        })
+    return pages
+
+# --- Clean page text ---
+def clean_page_text(text):
     text = re.sub(r"\s+", " ", text)
-    # Fix common ligatures
     text = text.replace("ﬁ", "fi").replace("ﬂ", "fl")
-    # Remove lines with just numbers (likely page numbers)
-    text = re.sub(r'\b\d+\b', '', text)
-    # Remove "Contents" or chapter headings
     text = re.sub(r'(?i)\b(contents|chapter \d+|table of contents)\b', '', text)
     return text.strip()
 
-
-# --- Chunking ---
-def split_into_chunks(text, chunk_size=CHUNK_SIZE, overlap=CHUNK_OVERLAP):
-    # Split by sentences and group into chunks
+# --- Chunk text with overlap ---
+def chunk_text(text, chunk_size=CHUNK_SIZE, overlap=CHUNK_OVERLAP):
     sentences = re.split(r'(?<=[\.\?!])\s+(?=[A-Z\\])', text)
     chunks = []
     current_chunk = ""
@@ -47,53 +55,74 @@ def split_into_chunks(text, chunk_size=CHUNK_SIZE, overlap=CHUNK_OVERLAP):
     if current_chunk:
         chunks.append(current_chunk.strip())
 
-    # Add overlap
+    # Add overlap between chunks
     final_chunks = []
-    for i in range(0, len(chunks)):
+    for i in range(len(chunks)):
         start = max(i - 1, 0)
         combined = " ".join(chunks[start:i+1])
         final_chunks.append(combined.strip())
 
     return final_chunks
 
-# --- Embedding & FAISS ---
+# --- Process raw text into chunks with page numbers ---
+def process_text_into_chunks_with_pages(raw_text):
+    pages = split_into_pages(raw_text)
+    all_chunks = []
+
+    for page in pages:
+        cleaned_text = clean_page_text(page['text'])
+        page_chunks = chunk_text(cleaned_text)
+
+        for chunk in page_chunks:
+            all_chunks.append({
+                "page": page["page"],
+                "text": chunk
+            })
+
+    return all_chunks
+
+# --- Embed chunks ---
 def embed_chunks(chunks, model_name=EMBED_MODEL):
     model = SentenceTransformer(model_name)
-    embeddings = model.encode(chunks, show_progress_bar=True)
-    return embeddings, chunks
+    texts = [chunk["text"] for chunk in chunks]
+    embeddings = model.encode(texts, show_progress_bar=True)
+    return embeddings
 
+# --- Build FAISS index ---
 def build_faiss_index(embeddings):
     dim = embeddings.shape[1]
     index = faiss.IndexFlatL2(dim)
     index.add(embeddings)
     return index
 
+# --- Save index ---
 def save_index(index, path=INDEX_PATH):
     faiss.write_index(index, path)
 
-def save_chunks(chunks, path=TEXTS_OUT_PATH):
+# --- Save chunks with page info ---
+def save_chunks_json(chunks, path=CHUNKS_JSON_PATH):
     with open(path, "w", encoding="utf-8") as f:
-        for chunk in chunks:
-            f.write(chunk.replace("\n", " ") + "\n")
+        json.dump(chunks, f, indent=2)
 
 # --- Main ---
 if __name__ == "__main__":
-    print("📄 Loading text...")
-    raw_text = load_text(TEXT_PATH)
+    print("📄 Loading raw text...")
+    raw_text = load_raw_text(RAW_TEXT_PATH)
 
-    print("🔪 Chunking...")
-    chunks = split_into_chunks(raw_text)
+    print("🔪 Splitting and chunking with page info...")
+    chunks_with_pages = process_text_into_chunks_with_pages(raw_text)
+    print(f"📝 Created {len(chunks_with_pages)} chunks.")
 
-    print(f"📚 Created {len(chunks)} chunks")
+    print("🧠 Embedding chunks...")
+    embeddings = embed_chunks(chunks_with_pages)
 
-    print("🧠 Embedding...")
-    embeddings, cleaned_chunks = embed_chunks(chunks)
+    print("💾 Building FAISS index...")
+    index = build_faiss_index(np.array(embeddings))
 
     print("💾 Saving FAISS index...")
-    index = build_faiss_index(np.array(embeddings))
     save_index(index)
 
-    print("📝 Saving text chunks...")
-    save_chunks(cleaned_chunks)
+    print("💾 Saving chunks with page info...")
+    save_chunks_json(chunks_with_pages)
 
-    print("✅ Done!")
+    print("✅ All done!")

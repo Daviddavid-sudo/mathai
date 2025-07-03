@@ -1,17 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
     <title>Math QA</title>
     <style>
         body { font-family: 'Helvetica Neue', sans-serif; padding: 2rem; max-width: 800px; margin: auto; }
         .question-form { margin-bottom: 2rem; }
         textarea { width: 100%; padding: 0.5rem; font-size: 1rem; }
         .answer-box { background: #f0f0f0; padding: 1rem; border-radius: 8px; white-space: pre-wrap; }
-        .chunks { margin-top: 1rem; font-size: 0.9rem; color: #444; }
+        .chunk { margin-top: 1rem; font-size: 0.9rem; color: #444; }
+        ul.pages-list { list-style-type: none; padding-left: 0; }
+        ul.pages-list li { display: inline; margin-right: 1rem; }
+        ul.pages-list li a { cursor: pointer; text-decoration: underline; color: blue; }
     </style>
 
-    <!-- ✅ MathJax CDN (v3) -->
+    <!-- MathJax for LaTeX rendering -->
     <script>
     window.MathJax = {
         tex: {
@@ -29,7 +32,7 @@
 
     <form method="POST" class="question-form">
         {% csrf_token %}
-        <textarea name="question" rows="3" placeholder="What is a K3 surface?">{{ question }}</textarea><br>
+        <textarea name="question" rows="3" placeholder="What is a K3 surface?">{{ question }}</textarea><br />
         <button type="submit">Ask</button>
     </form>
 
@@ -40,23 +43,36 @@
         </div>
     {% endif %}
 
-    {% if retrieved_chunks %}
-        <h3>Retrieved Chunks:</h3>
-        <div class="chunks">
-            <ul>
-                {% for chunk in retrieved_chunks %}
-                    <li>{{ chunk|truncatechars:300 }}</li>
-                {% endfor %}
-            </ul>
+    {% if retrieved_chunk %}
+        <h3>Most Relevant Chunk (Page {{ relevant_page }})</h3>
+        <div class="chunk">
+            {{ retrieved_chunk|truncatechars:500 }}
         </div>
     {% endif %}
 
+    {% if relevant_page %}
+        <h3>Relevant PDF Page</h3>
+        <ul class="pages-list">
+            <li><a onclick="jumpToPage({{ relevant_page }}); return false;">Page {{ relevant_page }}</a></li>
+        </ul>
+    {% endif %}
+
     <h2>📄 Source Document</h2>
-<iframe
-    src="{{ pdf_url }}"
-    width="100%"
-    height="600px"
-    style="border: 1px solid #ccc; border-radius: 8px;"
-></iframe>
+    <iframe
+        src="{{ pdf_url }}"
+        id="pdf-frame"
+        width="100%"
+        height="600px"
+        style="border: 1px solid #ccc; border-radius: 8px;"
+    ></iframe>
+
+    <script>
+        function jumpToPage(page) {
+            const iframe = document.getElementById('pdf-frame');
+            // Append #page=PAGE_NUM to PDF URL to jump to that page (browser must support)
+            iframe.src = "{{ pdf_url }}" + "#page=" + page;
+        }
+    </script>
+
 </body>
 </html>
