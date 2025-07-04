@@ -8,13 +8,9 @@ import re
 import subprocess
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-INDEX_PATH = os.path.join(BASE_DIR, "faiss_index.index")
-TEXTS_PATH = os.path.join(BASE_DIR, "index_chunks.json")
-
 EMBEDDING_MODEL = "intfloat/e5-base-v2"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-# Load embedding model and tokenizer once
 print("🔄 Loading embedding model and tokenizer...")
 tokenizer = AutoTokenizer.from_pretrained(EMBEDDING_MODEL)
 model = AutoModel.from_pretrained(EMBEDDING_MODEL).to(DEVICE)
@@ -33,15 +29,33 @@ def embed_query(query):
     embedding = mean_pooling(model_output, encoded["attention_mask"])
     return embedding.cpu().numpy()
 
-def load_index_and_texts(index_path=INDEX_PATH, texts_path=TEXTS_PATH):
-    try:
-        index = faiss.read_index(index_path)
-        with open(texts_path, "r", encoding="utf-8") as f:
-            texts_with_pages = json.load(f)
-        return index, texts_with_pages
-    except Exception as e:
-        print(f"❌ Error loading index/texts: {e}")
+
+def load_index_and_texts_for_pdf(pdf_name):
+    base_dir = os.path.dirname(os.path.abspath(__file__))  # Always safe
+    chunks_dir = os.path.join(base_dir, "data", "pdf_chunks")
+
+    index_path = os.path.join(base_dir, "..", "data", "pdf_chunks", f"{pdf_name}_chunks.index")
+    json_path = os.path.join(base_dir, "..", "data", "pdf_chunks", f"{pdf_name}_chunks.json")
+
+
+    print(f"📁 BASE_DIR = {base_dir}")
+    print(f"🔍 Index path: {index_path}")
+    print(f"🔍 JSON path: {json_path}")
+    print(f"📦 Index exists: {os.path.exists(index_path)}")
+    print(f"📦 JSON exists: {os.path.exists(json_path)}")
+
+    if not os.path.exists(index_path) or not os.path.exists(json_path):
+        print(f"❌ Index or chunks files not found for PDF: {pdf_name}")
+        print(f"🔍 Looked for index at: {index_path}")
+        print(f"🔍 Looked for JSON at: {json_path}")
         return None, []
+
+    index = faiss.read_index(index_path)
+    with open(json_path, "r", encoding="utf-8") as f:
+        chunks = json.load(f)
+
+    return index, chunks
+
 
 def search_index(query_embedding, index, k=5):
     if index is None:
@@ -84,7 +98,6 @@ def llama_select_relevant_chunks(question, candidates):
 
     relevant_chunks = []
     for i, chunk in enumerate(candidates):
-        # Updated regex to handle optional "(Page N)" and optional leading spaces
         pattern = rf"^\s*Chunk {i}( \(Page \d+\))?:\s*(YES|NO)"
         match = re.search(pattern, response, re.IGNORECASE | re.MULTILINE)
         if match and match.group(2).strip().upper() == "YES":
@@ -92,9 +105,10 @@ def llama_select_relevant_chunks(question, candidates):
 
     return relevant_chunks
 
-def answer_question_pipeline(question):
+def answer_question_for_pdf(pdf_name, question, base_dir=BASE_DIR):
+    index, texts = load_index_and_texts_for_pdf(pdf_name)  # ✅ CORRECT
     if index is None or not texts:
-        return "Error: FAISS index or texts not found.", [], []
+        return f"Error: Index or texts not found for PDF '{pdf_name}'.", [], []
 
     query_embedding = embed_query(question)
     top_indices = search_index(query_embedding, index, k=5)
@@ -112,5 +126,12 @@ def answer_question_pipeline(question):
     page_list = [c['page'] for c in relevant_chunks]
     return answer, page_list, relevant_chunks
 
-# Load index and texts at module level
-index, texts = load_index_and_texts()
+# Example usage:
+if __name__ == "__main__":
+    # Simulate user input:
+    pdf_name = input("Enter PDF base name (without extension): ").strip()
+    question = input("Enter your question: ").strip()
+
+    answer, pages, chunks = answer_question_for_pdf(pdf_name, question)
+    print("\n--- Answer ---\n")
+    print(answer)

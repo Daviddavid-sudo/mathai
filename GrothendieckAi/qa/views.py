@@ -1,8 +1,9 @@
 from django.shortcuts import render, redirect
 from GrothendieckAi.forms import MathQuestionForm
-from GrothendieckAi.utils.query_llama import answer_question_pipeline
+from GrothendieckAi.utils.query_llama import answer_question_for_pdf
 from qa.models import QuestionHistory, PDFDocument
 from qa.forms import PDFUploadForm
+import os
 
 
 def home_view(request):
@@ -21,7 +22,8 @@ def math_qa_view(request):
         selected_pdf = PDFDocument.objects.get(id=pdf_id) if pdf_id else None
 
         if question and selected_pdf:
-            _, pages, _ = answer_question_pipeline(question, selected_pdf.file.path)
+            pdf_base_name = os.path.splitext(os.path.basename(selected_pdf.file.path))[0]
+            answer, pages, _ = answer_question_for_pdf(pdf_base_name, question)
             relevant_pages = pages if pages else []
 
     elif request.method == 'GET':
@@ -39,7 +41,6 @@ def math_qa_view(request):
         'selected_pdf': selected_pdf,
         'pdf_url': selected_pdf.file.url if selected_pdf else '',
     })
-
 
 def history_view(request):
     history = QuestionHistory.objects.order_by('-timestamp')[:50]
