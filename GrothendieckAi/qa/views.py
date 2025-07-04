@@ -12,17 +12,32 @@ def home_view(request):
 def math_qa_view(request):
     question = None
     relevant_pages = []
+    selected_pdf = None
+    pdfs = PDFDocument.objects.all().order_by('-uploaded_at')
 
     if request.method == 'POST':
         question = request.POST.get('question', '').strip()
-        if question:
-            _, pages, _ = answer_question_pipeline(question)
+        pdf_id = request.POST.get('pdf_id')
+        selected_pdf = PDFDocument.objects.get(id=pdf_id) if pdf_id else None
+
+        if question and selected_pdf:
+            _, pages, _ = answer_question_pipeline(question, selected_pdf.file.path)
             relevant_pages = pages if pages else []
+
+    elif request.method == 'GET':
+        pdf_id = request.GET.get('pdf_id')
+        if pdf_id:
+            try:
+                selected_pdf = PDFDocument.objects.get(id=pdf_id)
+            except PDFDocument.DoesNotExist:
+                selected_pdf = None
 
     return render(request, 'question_form.html', {
         'question': question,
         'relevant_pages': relevant_pages,
-        'pdf_url': '/media/K3Global.pdf',
+        'pdfs': pdfs,
+        'selected_pdf': selected_pdf,
+        'pdf_url': selected_pdf.file.url if selected_pdf else '',
     })
 
 

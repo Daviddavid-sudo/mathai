@@ -5,10 +5,28 @@
 {% block content %}
 <h1>Ask a Math Question</h1>
 
+<form id="pdfSelectForm" method="GET">
+    <label for="pdf_id">Select a document:</label>
+    <select name="pdf_id" id="pdf_id" onchange="document.getElementById('pdfSelectForm').submit();">
+        <option value="">-- Choose a PDF --</option>
+        {% for pdf in pdfs %}
+            <option value="{{ pdf.id }}" {% if selected_pdf and pdf.id == selected_pdf.id %}selected{% endif %}>
+                {{ pdf.title }}
+            </option>
+        {% endfor %}
+    </select>
+</form>
+
+<br>
+
 <form method="POST" class="question-form">
     {% csrf_token %}
+    {% if selected_pdf %}
+        <input type="hidden" name="pdf_id" value="{{ selected_pdf.id }}">
+    {% endif %}
+    
     <textarea name="question" rows="3" placeholder="What is a K3 surface?">{{ question }}</textarea><br />
-    <button type="submit">Ask</button>
+    <button type="submit" {% if not selected_pdf %}disabled{% endif %}>Ask</button>
 </form>
 
 {% if relevant_pages %}
@@ -20,6 +38,7 @@
     </ul>
 {% endif %}
 
+{% if pdf_url %}
 <h2>📄 Source Document</h2>
 <iframe
     src="{{ pdf_url }}"
@@ -28,14 +47,14 @@
     height="600px"
     style="border: 1px solid #ccc; border-radius: 8px;"
 ></iframe>
+{% endif %}
 
 <script>
-    const pdfUrl = "{{ pdf_url|escapejs }}";
+    const pdfUrl = "{{ pdf_url }}";
 
     function jumpToPage(page) {
         const iframe = document.getElementById('pdf-frame');
         iframe.src = pdfUrl + "#page=" + page;
     }
 </script>
-
 {% endblock %}
