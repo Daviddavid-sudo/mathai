@@ -19,12 +19,19 @@ def math_qa_view(request):
     if request.method == 'POST':
         question = request.POST.get('question', '').strip()
         pdf_id = request.POST.get('pdf_id')
-        selected_pdf = PDFDocument.objects.get(id=pdf_id) if pdf_id else None
+
+        if pdf_id:
+            try:
+                selected_pdf = PDFDocument.objects.get(id=pdf_id)
+            except PDFDocument.DoesNotExist:
+                selected_pdf = None
 
         if question and selected_pdf:
             pdf_base_name = os.path.splitext(os.path.basename(selected_pdf.file.path))[0]
             answer, pages, _ = answer_question_for_pdf(pdf_base_name, question)
-            relevant_pages = pages if pages else []
+
+            # ✅ Deduplicate and sort relevant pages
+            relevant_pages = sorted(set(pages)) if pages else []
 
     elif request.method == 'GET':
         pdf_id = request.GET.get('pdf_id')
@@ -34,6 +41,8 @@ def math_qa_view(request):
             except PDFDocument.DoesNotExist:
                 selected_pdf = None
 
+    print("Relevant pages:", relevant_pages)
+
     return render(request, 'question_form.html', {
         'question': question,
         'relevant_pages': relevant_pages,
@@ -41,6 +50,7 @@ def math_qa_view(request):
         'selected_pdf': selected_pdf,
         'pdf_url': selected_pdf.file.url if selected_pdf else '',
     })
+
 
 def history_view(request):
     history = QuestionHistory.objects.order_by('-timestamp')[:50]

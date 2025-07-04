@@ -5,13 +5,14 @@
 {% block content %}
 <h1>Ask a Math Question</h1>
 
+<!-- PDF Selection -->
 <form id="pdfSelectForm" method="GET">
     <label for="pdf_id">Select a document:</label>
     <select name="pdf_id" id="pdf_id" onchange="document.getElementById('pdfSelectForm').submit();">
         <option value="">-- Choose a PDF --</option>
         {% for pdf in pdfs %}
             <option value="{{ pdf.id }}" {% if selected_pdf and pdf.id == selected_pdf.id %}selected{% endif %}>
-                {{ pdf.title }}
+                {{ pdf.title|default:pdf.file.name|cut:"/media/pdfs/" }}
             </option>
         {% endfor %}
     </select>
@@ -19,6 +20,7 @@
 
 <br>
 
+<!-- Question Form -->
 <form method="POST" class="question-form">
     {% csrf_token %}
     {% if selected_pdf %}
@@ -29,6 +31,7 @@
     <button type="submit" {% if not selected_pdf %}disabled{% endif %}>Ask</button>
 </form>
 
+<!-- Relevant Pages -->
 {% if relevant_pages %}
     <h3>Relevant PDF Pages</h3>
     <ul class="pages-list">
@@ -38,15 +41,16 @@
     </ul>
 {% endif %}
 
+<!-- PDF Viewer -->
 {% if pdf_url %}
-<h2>📄 Source Document</h2>
-<iframe
-    src="{{ pdf_url }}"
-    id="pdf-frame"
-    width="100%"
-    height="600px"
-    style="border: 1px solid #ccc; border-radius: 8px;"
-></iframe>
+    <h2>📄 Source Document</h2>
+    <iframe
+        src="{{ pdf_url }}"
+        id="pdf-frame"
+        width="100%"
+        height="600px"
+        style="border: 1px solid #ccc; border-radius: 8px;"
+    ></iframe>
 {% endif %}
 
 <script>
