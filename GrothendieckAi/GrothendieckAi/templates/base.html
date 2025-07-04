@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Math QA{% endblock %}</title>
+    <style>
+        body { font-family: 'Helvetica Neue', sans-serif; padding: 2rem; max-width: 800px; margin: auto; }
+        header { margin-bottom: 2rem; border-bottom: 1px solid #ccc; padding-bottom: 1rem; }
+        nav a { margin-right: 1rem; text-decoration: none; color: blue; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="{% url 'home' %}">🏠 Home</a>
+            <a href="{% url 'ask' %}">❓ Ask a Question</a>
+            <a href="{% url 'library' %}"> Library</a>
+            <a href="{% url 'history' %}">📜 History</a>
+        </nav>
+    </header>
+
+    {% block content %}
+    {% endblock %}
+</body>
+</html>

@@ -16,13 +16,16 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from .views import math_qa_view
+from qa.views import math_qa_view, history_view, home_view, library_view
 from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', math_qa_view, name='math_qa'),
+    path('', home_view, name='home'),
+    path('ask/', math_qa_view, name='ask'),
+    path('library/', library_view, name='library'),
+    path('history/', history_view, name='history'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 if settings.DEBUG:

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Library{% endblock %}
+
+{% block content %}
+<h1>Library</h1>
+
+<h2>Upload a new PDF</h2>
+<form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Upload</button>
+</form>
+
+<hr />
+
+<h2>Uploaded PDFs</h2>
+<ul>
+    {% for pdf in pdfs %}
+        <li>
+            <a href="{{ pdf.file.url }}" target="_blank">{{ pdf.title }}</a>
+            (uploaded at {{ pdf.uploaded_at|date:"Y-m-d H:i" }})
+        </li>
+    {% empty %}
+        <li>No PDFs uploaded yet.</li>
+    {% endfor %}
+</ul>
+{% endblock %}

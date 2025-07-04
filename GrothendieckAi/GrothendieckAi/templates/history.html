@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}History{% endblock %}
+
+{% block content %}
+<h1>📜 Question History</h1>
+
+{% if history %}
+    <ul>
+        {% for entry in history %}
+            <li>
+                <strong>{{ entry.timestamp|date:"Y-m-d H:i" }}</strong><br>
+                <em>Q:</em> {{ entry.question }}<br>
+                <em>A:</em> {{ entry.answer|truncatechars:200 }}
+                <br><hr>
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p>No history yet.</p>
+{% endif %}
+{% endblock %}

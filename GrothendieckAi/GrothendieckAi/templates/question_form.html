@@ -1,51 +1,41 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8" />
-    <title>Math QA</title>
-    <style>
-        body { font-family: 'Helvetica Neue', sans-serif; padding: 2rem; max-width: 800px; margin: auto; }
-        .question-form { margin-bottom: 2rem; }
-        textarea { width: 100%; padding: 0.5rem; font-size: 1rem; }
-        ul.pages-list { list-style-type: none; padding-left: 0; }
-        ul.pages-list li { display: inline; margin-right: 1rem; }
-        ul.pages-list li a { cursor: pointer; text-decoration: underline; color: blue; }
-    </style>
-</head>
-<body>
+{% extends "base.html" %}
 
-    <h1>Ask a Math Question</h1>
+{% block title %}Math QA{% endblock %}
 
-    <form method="POST" class="question-form">
-        {% csrf_token %}
-        <textarea name="question" rows="3" placeholder="What is a K3 surface?">{{ question }}</textarea><br />
-        <button type="submit">Ask</button>
-    </form>
+{% block content %}
+<h1>Ask a Math Question</h1>
 
-    {% if relevant_pages %}
-        <h3>Relevant PDF Pages</h3>
-        <ul class="pages-list">
-            {% for page in relevant_pages %}
-                <li><a onclick="jumpToPage({{ page }}); return false;">Page {{ page }}</a></li>
-            {% endfor %}
-        </ul>
-    {% endif %}
+<form method="POST" class="question-form">
+    {% csrf_token %}
+    <textarea name="question" rows="3" placeholder="What is a K3 surface?">{{ question }}</textarea><br />
+    <button type="submit">Ask</button>
+</form>
 
-    <h2>📄 Source Document</h2>
-    <iframe
-        src="{{ pdf_url }}"
-        id="pdf-frame"
-        width="100%"
-        height="600px"
-        style="border: 1px solid #ccc; border-radius: 8px;"
-    ></iframe>
+{% if relevant_pages %}
+    <h3>Relevant PDF Pages</h3>
+    <ul class="pages-list">
+        {% for page in relevant_pages %}
+            <li><a href="#" onclick="jumpToPage({{ page }}); return false;">Page {{ page }}</a></li>
+        {% endfor %}
+    </ul>
+{% endif %}
+
+<h2>📄 Source Document</h2>
+<iframe
+    src="{{ pdf_url }}"
+    id="pdf-frame"
+    width="100%"
+    height="600px"
+    style="border: 1px solid #ccc; border-radius: 8px;"
+></iframe>
 
 <script>
+    const pdfUrl = "{{ pdf_url|escapejs }}";
+
     function jumpToPage(page) {
         const iframe = document.getElementById('pdf-frame');
-        iframe.src = "{{ pdf_url }}" + "#page=" + page;
+        iframe.src = pdfUrl + "#page=" + page;
     }
 </script>
 
-</body>
-</html>
+{% endblock %}
