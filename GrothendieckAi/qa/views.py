@@ -6,6 +6,10 @@ from qa.forms import PDFUploadForm, QuestionHistoryForm
 import os
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
+from GrothendieckAi.utils.embed_and_index import process_pdf  # or whatever file this is in
+from django.conf import settings
+from django.contrib import messages
+
 
 def home_view(request):
     return render(request, 'home.html')
@@ -64,13 +68,51 @@ def library_view(request):
     if request.method == 'POST':
         form = PDFUploadForm(request.POST, request.FILES)
         if form.is_valid():
-            form.save()
-            return redirect('library')  # Redirect to avoid re-posting on refresh
+            pdf = form.save()
+            pdf_path = os.path.join(settings.MEDIA_ROOT, str(pdf.file))
+            try:
+                process_pdf(pdf_path)
+                messages.success(request, "PDF uploaded and processed successfully.")
+            except Exception as e:
+                messages.error(request, f"Error processing PDF: {e}")
+                pdf.delete()  # Optional: remove broken upload
+            return redirect('library')
     else:
         form = PDFUploadForm()
 
     pdfs = PDFDocument.objects.all().order_by('-uploaded_at')
     return render(request, 'library.html', {'form': form, 'pdfs': pdfs})
+
+
+@login_required
+def delete_pdf(request, pk):
+    pdf = get_object_or_404(PDFDocument, pk=pk)
+
+    if request.method == 'POST':
+        # Delete uploaded PDF file from filesystem
+        if pdf.file and pdf.file.path:
+            try:
+                os.remove(pdf.file.path)
+            except Exception as e:
+                print(f"Failed to delete uploaded PDF: {e}")
+
+        # Delete associated FAISS index, JSON, and chunk text files
+        base_name = os.path.splitext(os.path.basename(pdf.file.name))[0]
+        chunk_dir = os.path.join("GrothendieckAi", "data", "pdf_chunks")
+
+        for ext in [".index", ".json", "_chunks.txt"]:
+            try:
+                path = os.path.join(chunk_dir, base_name + ext)
+                if os.path.exists(path):
+                    os.remove(path)
+            except Exception as e:
+                print(f"Failed to delete associated file {ext}: {e}")
+
+        # Delete the database record
+        pdf.delete()
+        return redirect('library')
+
+    return render(request, 'delete_pdf.html', {'pdf': pdf})
 
 
 def history_view(request):

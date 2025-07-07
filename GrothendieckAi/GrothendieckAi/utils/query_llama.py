@@ -32,15 +32,8 @@ def embed_query(query):
 
 def load_index_and_texts_for_pdf(pdf_name):
     base_dir = os.path.dirname(os.path.abspath(__file__))  # Always safe
-    chunks_dir = os.path.join(base_dir, "data", "pdf_chunks")
-
     index_path = os.path.join(base_dir, "..", "data", "pdf_chunks", f"{pdf_name}_chunks.index")
     json_path = os.path.join(base_dir, "..", "data", "pdf_chunks", f"{pdf_name}_chunks.json")
-
-
-    print(f"📁 BASE_DIR = {base_dir}")
-    print(f"🔍 Index path: {index_path}")
-    print(f"🔍 JSON path: {json_path}")
     print(f"📦 Index exists: {os.path.exists(index_path)}")
     print(f"📦 JSON exists: {os.path.exists(json_path)}")
 
@@ -84,10 +77,12 @@ def llama_select_relevant_chunks(question, candidates):
     prompt = (
         f"You are a helpful AI assistant. A user asks the question:\n\n"
         f"\"{question}\"\n\n"
-        f"You are given several chunks of text from a document. For each chunk, reply YES if it likely helps answer the question, otherwise reply NO.\n\n"
+        f"For each chunk of text below, respond YES if it contains a concept asked about. "
         f"Respond using the following format:\n"
-        f"Chunk 0: YES\nChunk 1: NO\n...\n\n"
+        f"Chunk 0: NO\n"
+        f"Chunk 1: YES\n"
     )
+
 
     for i, chunk in enumerate(candidates):
         snippet = chunk["text"][:800].replace("\n", " ").strip()
@@ -105,14 +100,21 @@ def llama_select_relevant_chunks(question, candidates):
 
     return relevant_chunks
 
+
 def answer_question_for_pdf(pdf_name, question, base_dir=BASE_DIR):
-    index, texts = load_index_and_texts_for_pdf(pdf_name)  # ✅ CORRECT
+    index, texts = load_index_and_texts_for_pdf(pdf_name)
     if index is None or not texts:
         return f"Error: Index or texts not found for PDF '{pdf_name}'.", [], []
 
     query_embedding = embed_query(question)
     top_indices = search_index(query_embedding, index, k=5)
     candidates = [texts[i] for i in top_indices if i < len(texts)]
+
+    # Print the 5 chunks before relevance filtering
+    print("\n📝 Top 5 chunks retrieved by FAISS index:")
+    for i, chunk in enumerate(candidates):
+        snippet = chunk["text"][:300].replace("\n", " ").strip()
+        print(f"Chunk {i} (Page {chunk.get('page', '?')}): {snippet}...")
 
     if not candidates:
         return "No relevant context found.", [], []
@@ -126,12 +128,3 @@ def answer_question_for_pdf(pdf_name, question, base_dir=BASE_DIR):
     page_list = [c['page'] for c in relevant_chunks]
     return answer, page_list, relevant_chunks
 
-# Example usage:
-if __name__ == "__main__":
-    # Simulate user input:
-    pdf_name = input("Enter PDF base name (without extension): ").strip()
-    question = input("Enter your question: ").strip()
-
-    answer, pages, chunks = answer_question_for_pdf(pdf_name, question)
-    print("\n--- Answer ---\n")
-    print(answer)

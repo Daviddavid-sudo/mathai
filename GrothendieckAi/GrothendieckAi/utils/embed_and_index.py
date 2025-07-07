@@ -7,8 +7,8 @@ import PyPDF2
 from transformers import AutoTokenizer, AutoModel
 
 # --------- Config ---------
-PDFS_DIR = "GrothendieckAi/GrothendieckAi/data/pdfs/"
-CHUNKS_DIR = "GrothendieckAi/GrothendieckAi/data/pdf_chunks/"
+PDFS_DIR = "GrothendieckAi/data/pdfs/"
+CHUNKS_DIR = "GrothendieckAi/data/pdf_chunks/"
 os.makedirs(CHUNKS_DIR, exist_ok=True)
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -159,13 +159,3 @@ def process_pdf(pdf_path):
     save_chunks_with_pages(chunks, json_path)
     print(f"Saved FAISS index: {index_path}")
     print(f"Saved chunks JSON: {json_path}")
-
-# --------- Main ---------
-if __name__ == "__main__":
-    pdf_files = [os.path.join(PDFS_DIR, f) for f in os.listdir(PDFS_DIR) if f.lower().endswith(".pdf")]
-    if not pdf_files:
-        print(f"No PDFs found in {PDFS_DIR}")
-    else:
-        for pdf_file in pdf_files:
-            process_pdf(pdf_file)
-    print("\nAll PDFs processed and indexed.")
