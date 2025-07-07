@@ -50,7 +50,7 @@ def load_index_and_texts_for_pdf(pdf_name):
     return index, chunks
 
 
-def search_index(query_embedding, index, k=7):
+def search_index(query_embedding, index, k=6):
     if index is None:
         return []
     D, I = index.search(query_embedding, k)
@@ -109,11 +109,11 @@ def answer_question_for_pdf(pdf_name, question, base_dir=BASE_DIR):
         return f"Error: Index or texts not found for PDF '{pdf_name}'.", [], []
 
     query_embedding = embed_query(question)
-    top_indices = search_index(query_embedding, index, k=7)
+    top_indices = search_index(query_embedding, index, k=6)
     candidates = [texts[i] for i in top_indices if i < len(texts)]
 
     # Print the 5 chunks before relevance filtering
-    print("\n📝 Top 7 chunks retrieved by FAISS index:")
+    print("\n📝 Top 6 chunks retrieved by FAISS index:")
     for i, chunk in enumerate(candidates):
         snippet = chunk["text"][:500].replace("\n", " ").strip()
         print(f"Chunk {i} (Page {chunk.get('page', '?')}): {snippet}...")

@@ -13,8 +13,15 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 from django.http import JsonResponse
 import subprocess
+import logging
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+
+logger = logging.getLogger(__name__)
+
 
 def call_llama3_2(prompt: str) -> str:
+    logger.info("call_llama3_2 called with prompt length %d", len(prompt))
     try:
         result = subprocess.run(
             ["ollama", "run", "llama3.2"],
@@ -24,40 +31,50 @@ def call_llama3_2(prompt: str) -> str:
             timeout=300
         )
         if result.returncode != 0:
-            print(f"❌ Ollama CLI error: {result.stderr}")
-            return ""
+            logger.error(f"Ollama CLI error: {result.stderr}")
+            return f"Error from LLaMA model: {result.stderr.strip()}"
+        logger.info("Ollama CLI output length %d", len(result.stdout))
         return result.stdout.strip()
     except Exception as e:
-        print(f"❌ Exception running llama3.2 CLI: {e}")
-        return ""
+        logger.exception("Exception running llama3.2 CLI")
+        return f"Exception: {str(e)}"
 
 
-@csrf_exempt  # For AJAX POST; consider better CSRF handling in production
-def tutor_view(request):
+def tutor_page_view(request):
+    # Serve the chat page on GET
+    return render(request, "tutor.html")
+
+
+@csrf_exempt
+def tutor_api_view(request):
     if request.method == "POST":
+        logger.info("Received POST to tutor_api")
         try:
             data = json.loads(request.body)
             user_message = data.get('message', '').strip()
+            logger.info(f"User message: {user_message}")
+
             if not user_message:
                 return JsonResponse({"error": "Empty message"}, status=400)
 
-            # Prepare prompt for llama3.2 (you can customize this)
             prompt = (
                 f"You are an expert algebraic geometry tutor AI. The user says: \"{user_message}\". "
                 "Respond with deep technical knowledge, including precise mathematical definitions, formulas, "
-                "and examples when necessary. Don't hesitate to use LaTeX notation to clearly illustrate concepts. "
-                "Be rigorous but also aim to explain concepts in a way that helps learners understand advanced algebraic geometry."
+                "and examples when necessary. Use LaTeX notation when appropriate."
             )
 
-            print("Received POST data:", data)
-            # Call your existing function that calls llama3.2 CLI
+            # Call your llama3.2 subprocess function here:
             response = call_llama3_2(prompt)
+
+            logger.info("Sending response from llama3.2")
             return JsonResponse({"response": response})
         except Exception as e:
+            logger.exception("Error processing tutor_api POST")
             return JsonResponse({"error": str(e)}, status=500)
 
-    # GET request renders the chat page
-    return render(request, "tutor.html")
+    # If GET or other method:
+    return JsonResponse({"error": "POST required"}, status=405)
+
 
 
 def home_view(request):

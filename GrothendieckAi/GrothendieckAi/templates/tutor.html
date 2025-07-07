@@ -19,6 +19,7 @@
     const chatForm = document.getElementById('chat-form');
     const userInput = document.getElementById('user-input');
 
+    // Function to add a message to chat box
     function addMessage(sender, text) {
         const messageElem = document.createElement('div');
         messageElem.style.margin = "0.5rem 0";
@@ -38,6 +39,7 @@
         chatBox.scrollTop = chatBox.scrollHeight;
     }
 
+    // Get CSRF token from cookies
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
@@ -60,6 +62,8 @@
 
         addMessage("You", message);
         userInput.value = "";
+
+        // Add "Typing..." placeholder from Tutor
         addMessage("Tutor", "Typing...");
 
         try {
@@ -67,12 +71,14 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
+                    'X-CSRFToken': getCookie('csrftoken'),
                 },
                 body: JSON.stringify({message})
             });
+
             const data = await response.json();
 
+            // Replace "Typing..." with actual response or error
             chatBox.lastChild.innerHTML = `<strong>Tutor:</strong> <pre>${data.response || data.error || 'No response'}</pre>`;
         } catch (err) {
             chatBox.lastChild.innerHTML = `<strong>Tutor:</strong> Error: ${err.message}`;

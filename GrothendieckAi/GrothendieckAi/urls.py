@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from qa.views import math_qa_view, history_view, home_view, library_view, delete_pdf, tutor_view
+from qa.views import math_qa_view, history_view, home_view, library_view, delete_pdf, tutor_page_view, tutor_api_view
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
@@ -37,8 +37,8 @@ urlpatterns = [
     path('history/edit/<int:pk>/', views.edit_question_history, name='edit_history'),
     path('history/delete/<int:pk>/', views.delete_question_history, name='delete_history'),
     path('pdf/delete/<int:pk>/', delete_pdf, name='delete_pdf'),
-    path('tutor/', views.tutor_view, name='tutor'),
-    path('tutor/api', tutor_view, name='tutor_api'),
+    path('tutor/', tutor_page_view, name='tutor'),       # For GET — render the page
+    path('tutor/api', tutor_api_view, name='tutor_api'), 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 if settings.DEBUG:
