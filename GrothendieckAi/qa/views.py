@@ -29,9 +29,16 @@ def math_qa_view(request):
         if question and selected_pdf:
             pdf_base_name = os.path.splitext(os.path.basename(selected_pdf.file.path))[0]
             answer, pages, _ = answer_question_for_pdf(pdf_base_name, question)
-
-            # ✅ Deduplicate and sort relevant pages
             relevant_pages = sorted(set(pages)) if pages else []
+
+            # Save question history
+            if request.user.is_authenticated:
+                QuestionHistory.objects.create(
+                    user=request.user,
+                    question=question,
+                    pdf=selected_pdf,         # if using ForeignKey
+                    source_pages=relevant_pages
+        )
 
     elif request.method == 'GET':
         pdf_id = request.GET.get('pdf_id')
@@ -52,11 +59,6 @@ def math_qa_view(request):
     })
 
 
-def history_view(request):
-    history = QuestionHistory.objects.order_by('-timestamp')[:50]
-    return render(request, 'history.html', {'history': history})
-
-
 def library_view(request):
     if request.method == 'POST':
         form = PDFUploadForm(request.POST, request.FILES)
@@ -68,3 +70,12 @@ def library_view(request):
 
     pdfs = PDFDocument.objects.all().order_by('-uploaded_at')
     return render(request, 'library.html', {'form': form, 'pdfs': pdfs})
+
+
+def history_view(request):
+    if request.user.is_authenticated:
+        # Assuming you have a model to track Q&A history, e.g. QuestionHistory
+        history = QuestionHistory.objects.filter(user=request.user).order_by('-timestamp')
+    else:
+        history = []
+    return render(request, 'history.html', {'history': history})

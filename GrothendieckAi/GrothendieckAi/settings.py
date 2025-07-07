@@ -72,6 +72,8 @@ TEMPLATES = [
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'GrothendieckAi', 'data')  
 
+LOGIN_REDIRECT_URL = '/ask/'  # redirect after login to your question page
+LOGOUT_REDIRECT_URL = '/'     # redirect after logout to home page
 
 WSGI_APPLICATION = 'GrothendieckAi.wsgi.application'
 
