@@ -32,7 +32,7 @@ urlpatterns = [
     path('library/', library_view, name='library'),
     path('history/', history_view, name='history'),
     path('login/', auth_views.LoginView.as_view(), name='login'),
-    path('logout/', LogoutView.as_view(next_page='home', allow_get=True), name='logout'),
+    path('logout/', LogoutView.as_view(next_page='home'), name='logout'),
     path('register/', register, name='register'), 
     path('history/edit/<int:pk>/', views.edit_question_history, name='edit_history'),
     path('history/delete/<int:pk>/', views.delete_question_history, name='delete_history'),
