@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Math Tutor Chat{% endblock %}
+
+{% block content %}
+<h1>Math Tutor Chat with llama3.2</h1>
+
+<div id="chat-box" style="border:1px solid #ccc; padding: 1rem; height: 400px; overflow-y: auto; background:#f9f9f9;">
+    <!-- Messages will appear here -->
+</div>
+
+<form id="chat-form" style="margin-top: 1rem;">
+    {% csrf_token %}
+    <input type="text" id="user-input" autocomplete="off" placeholder="Ask your math question..." style="width: 80%;" />
+    <button type="submit">Send</button>
+</form>
+
+<script>
+    const chatBox = document.getElementById('chat-box');
+    const chatForm = document.getElementById('chat-form');
+    const userInput = document.getElementById('user-input');
+
+    function addMessage(sender, text) {
+        const messageElem = document.createElement('div');
+        messageElem.style.margin = "0.5rem 0";
+        messageElem.style.padding = "0.5rem";
+        messageElem.style.borderRadius = "6px";
+        messageElem.style.whiteSpace = "pre-wrap";  // Preserve line breaks
+        if (sender === "You") {
+            messageElem.style.backgroundColor = "#d1e7dd";
+            messageElem.style.textAlign = "right";
+            messageElem.innerHTML = `<strong>${sender}:</strong> ${text}`;
+        } else {
+            messageElem.style.backgroundColor = "#f8d7da";
+            messageElem.style.textAlign = "left";
+            messageElem.innerHTML = `<strong>${sender}:</strong> ${text}`;
+        }
+        chatBox.appendChild(messageElem);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                cookie = cookie.trim();
+                if (cookie.startsWith(name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    chatForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const message = userInput.value.trim();
+        if (!message) return;
+
+        addMessage("You", message);
+        userInput.value = "";
+        addMessage("Tutor", "Typing...");
+
+        try {
+            const response = await fetch("{% url 'tutor_api' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({message})
+            });
+            const data = await response.json();
+
+            chatBox.lastChild.innerHTML = `<strong>Tutor:</strong> <pre>${data.response || data.error || 'No response'}</pre>`;
+        } catch (err) {
+            chatBox.lastChild.innerHTML = `<strong>Tutor:</strong> Error: ${err.message}`;
+        }
+    });
+</script>
+{% endblock %}

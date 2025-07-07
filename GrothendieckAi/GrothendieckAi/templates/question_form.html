@@ -27,7 +27,7 @@
         <input type="hidden" name="pdf_id" value="{{ selected_pdf.id }}">
     {% endif %}
     
-    <textarea name="question" rows="3" placeholder="What is a K3 surface?">{{ question }}</textarea><br />
+    <textarea name="question" rows="3" placeholder="What is the definition of a K3 surface?">{{ question }}</textarea><br />
     <button type="submit" {% if not selected_pdf %}disabled{% endif %}>Ask</button>
 </form>
 

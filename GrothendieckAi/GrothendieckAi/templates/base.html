@@ -26,6 +26,7 @@
             {% if user.is_authenticated %}
                 <a href="{% url 'ask' %}">❓ Ask a Question</a>
                 <a href="{% url 'library' %}">📚 Library</a>
+                <a href="{% url 'tutor' %}">🤖 Math Tutor</a>
                 <a href="{% url 'history' %}">📜 History</a>
                 <span>Welcome, {{ user.username }}</span>
                 <form action="{% url 'logout' %}" method="post" style="display:inline;">

@@ -9,6 +9,55 @@ from django.shortcuts import get_object_or_404, redirect, render
 from GrothendieckAi.utils.embed_and_index import process_pdf  # or whatever file this is in
 from django.conf import settings
 from django.contrib import messages
+from django.views.decorators.csrf import csrf_exempt
+import json
+from django.http import JsonResponse
+import subprocess
+
+def call_llama3_2(prompt: str) -> str:
+    try:
+        result = subprocess.run(
+            ["ollama", "run", "llama3.2"],
+            input=prompt,
+            capture_output=True,
+            text=True,
+            timeout=300
+        )
+        if result.returncode != 0:
+            print(f"❌ Ollama CLI error: {result.stderr}")
+            return ""
+        return result.stdout.strip()
+    except Exception as e:
+        print(f"❌ Exception running llama3.2 CLI: {e}")
+        return ""
+
+
+@csrf_exempt  # For AJAX POST; consider better CSRF handling in production
+def tutor_view(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            user_message = data.get('message', '').strip()
+            if not user_message:
+                return JsonResponse({"error": "Empty message"}, status=400)
+
+            # Prepare prompt for llama3.2 (you can customize this)
+            prompt = (
+                f"You are an expert algebraic geometry tutor AI. The user says: \"{user_message}\". "
+                "Respond with deep technical knowledge, including precise mathematical definitions, formulas, "
+                "and examples when necessary. Don't hesitate to use LaTeX notation to clearly illustrate concepts. "
+                "Be rigorous but also aim to explain concepts in a way that helps learners understand advanced algebraic geometry."
+            )
+
+            print("Received POST data:", data)
+            # Call your existing function that calls llama3.2 CLI
+            response = call_llama3_2(prompt)
+            return JsonResponse({"response": response})
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    # GET request renders the chat page
+    return render(request, "tutor.html")
 
 
 def home_view(request):
