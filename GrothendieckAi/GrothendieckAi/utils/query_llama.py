@@ -50,7 +50,7 @@ def load_index_and_texts_for_pdf(pdf_name):
     return index, chunks
 
 
-def search_index(query_embedding, index, k=5):
+def search_index(query_embedding, index, k=7):
     if index is None:
         return []
     D, I = index.search(query_embedding, k)
@@ -63,7 +63,7 @@ def call_llama3_2(prompt: str) -> str:
             input=prompt,
             capture_output=True,
             text=True,
-            timeout=60
+            timeout=90
         )
         if result.returncode != 0:
             print(f"❌ Ollama CLI error: {result.stderr}")
@@ -77,12 +77,14 @@ def llama_select_relevant_chunks(question, candidates):
     prompt = (
         f"You are a helpful AI assistant. A user asks the question:\n\n"
         f"\"{question}\"\n\n"
-        f"For each chunk of text below, respond YES if it contains a concept asked about. "
-        f"Respond using the following format:\n"
-        f"Chunk 0: NO\n"
-        f"Chunk 1: YES\n"
+        f"You are given several chunks of text from a document. For each chunk, reply only YES or NO if it likely helps answer the question.\n"
+        f"Reply in EXACTLY the following format (no extra text):\n"
+        f"Chunk 0: YES\n"
+        f"Chunk 1: NO\n"
+        f"Chunk 2: YES\n"
+        f"...\n"
+        f"Do not include any other explanations or comments."
     )
-
 
     for i, chunk in enumerate(candidates):
         snippet = chunk["text"][:800].replace("\n", " ").strip()
@@ -107,13 +109,13 @@ def answer_question_for_pdf(pdf_name, question, base_dir=BASE_DIR):
         return f"Error: Index or texts not found for PDF '{pdf_name}'.", [], []
 
     query_embedding = embed_query(question)
-    top_indices = search_index(query_embedding, index, k=5)
+    top_indices = search_index(query_embedding, index, k=7)
     candidates = [texts[i] for i in top_indices if i < len(texts)]
 
     # Print the 5 chunks before relevance filtering
-    print("\n📝 Top 5 chunks retrieved by FAISS index:")
+    print("\n📝 Top 7 chunks retrieved by FAISS index:")
     for i, chunk in enumerate(candidates):
-        snippet = chunk["text"][:300].replace("\n", " ").strip()
+        snippet = chunk["text"][:500].replace("\n", " ").strip()
         print(f"Chunk {i} (Page {chunk.get('page', '?')}): {snippet}...")
 
     if not candidates:

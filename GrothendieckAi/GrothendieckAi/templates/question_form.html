@@ -39,6 +39,8 @@
             <li><a href="#" onclick="jumpToPage({{ page }}); return false;">Page {{ page }}</a></li>
         {% endfor %}
     </ul>
+{% else %}
+    <p>No relevant pages found.</p>
 {% endif %}
 
 <!-- PDF Viewer -->
@@ -51,14 +53,20 @@
         height="600px"
         style="border: 1px solid #ccc; border-radius: 8px;"
     ></iframe>
+{% else %}
+    <p>No PDF selected.</p>
 {% endif %}
 
 <script>
-    const pdfUrl = "{{ pdf_url }}";
+    const pdfBaseUrl = "{{ pdf_url|escapejs }}";
 
-    function jumpToPage(page) {
+    function jumpToPage(pageNum) {
+        if (!pageNum || pageNum < 1) return;
         const iframe = document.getElementById('pdf-frame');
-        iframe.src = pdfUrl + "#page=" + page;
+        if (iframe) {
+            iframe.src = pdfBaseUrl + "#page=" + pageNum;
+        }
     }
 </script>
+
 {% endblock %}
