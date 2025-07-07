@@ -8,17 +8,27 @@
 {% if history %}
     <ul>
        {% for entry in history %}
-    <li>
-        <strong>{{ entry.timestamp|date:"Y-m-d H:i" }}</strong><br>
-        <em>Q:</em> {{ entry.question }}<br>
-        <em>Document:</em> 
-        {% if entry.pdf %}
-            {{ entry.pdf.title }}
-        {% else %}
-            Unknown
-        {% endif %}
-        <br><hr>
-    </li>
+<li>
+    <strong>{{ entry.timestamp|date:"Y-m-d H:i" }}</strong><br>
+    <em>Q:</em> {{ entry.question }}<br>
+    <em>Document:</em> 
+    {% if entry.pdf %}
+        {{ entry.pdf.title }}
+    {% else %}
+        Unknown
+    {% endif %}
+    <br>
+    <em>Source Pages:</em> 
+    {% if entry.source_pages %}
+        {{ entry.source_pages|join:", " }}
+    {% else %}
+        None
+    {% endif %}
+    <br>
+    <a href="{% url 'edit_history' entry.pk %}">Edit</a> | 
+    <a href="{% url 'delete_history' entry.pk %}">Delete</a>
+    <hr>
+</li>
 {% endfor %}
 
 
@@ -27,3 +37,4 @@
     <p>No history yet.</p>
 {% endif %}
 {% endblock %}
+

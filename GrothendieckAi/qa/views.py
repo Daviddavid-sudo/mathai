@@ -2,9 +2,10 @@ from django.shortcuts import render, redirect
 from GrothendieckAi.forms import MathQuestionForm
 from GrothendieckAi.utils.query_llama import answer_question_for_pdf
 from qa.models import QuestionHistory, PDFDocument
-from qa.forms import PDFUploadForm
+from qa.forms import PDFUploadForm, QuestionHistoryForm
 import os
-
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404, redirect, render
 
 def home_view(request):
     return render(request, 'home.html')
@@ -79,3 +80,29 @@ def history_view(request):
     else:
         history = []
     return render(request, 'history.html', {'history': history})
+
+
+@login_required
+def edit_question_history(request, pk):
+    entry = get_object_or_404(QuestionHistory, pk=pk, user=request.user)
+
+    if request.method == 'POST':
+        form = QuestionHistoryForm(request.POST, instance=entry)
+        if form.is_valid():
+            form.save()
+            return redirect('history')
+    else:
+        form = QuestionHistoryForm(instance=entry)
+
+    return render(request, 'edit_history.html', {'form': form, 'entry': entry})
+
+
+@login_required
+def delete_question_history(request, pk):
+    entry = get_object_or_404(QuestionHistory, pk=pk, user=request.user)
+
+    if request.method == 'POST':
+        entry.delete()
+        return redirect('history')
+
+    return render(request, 'delete_history.html', {'entry': entry})
