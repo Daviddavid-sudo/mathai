@@ -1,5 +1,4 @@
 from django.shortcuts import render, redirect
-from GrothendieckAi.forms import MathQuestionForm
 from GrothendieckAi.utils.query_llama import answer_question_for_pdf
 from qa.models import QuestionHistory, PDFDocument
 from qa.forms import PDFUploadForm, QuestionHistoryForm
@@ -9,37 +8,54 @@ from django.shortcuts import get_object_or_404, redirect, render
 from GrothendieckAi.utils.embed_and_index import process_pdf  # or whatever file this is in
 from django.conf import settings
 from django.contrib import messages
-from django.views.decorators.csrf import csrf_exempt
 import json
-from django.http import JsonResponse
-import subprocess
 import logging
+import requests
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.shortcuts import render
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
+# You can also load this from settings.py or .env
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
 
 def call_llama3_2(prompt: str) -> str:
-    logger.info("call_llama3_2 called with prompt length %d", len(prompt))
-    try:
-        result = subprocess.run(
-            ["ollama", "run", "llama3.2"],
-            input=prompt,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            timeout=300
-        )
-        if result.returncode != 0:
-            logger.error(f"Ollama CLI error: {result.stderr.strip()}")
-            return f"Error from LLaMA model: {result.stderr.strip()}"
-        logger.info("Ollama CLI output length %d", len(result.stdout))
-        return result.stdout.strip()
-    except Exception as e:
-        logger.exception("Exception running llama3.2 CLI")
-        return f"Exception: {str(e)}"
+    if not GROQ_API_KEY:
+        logger.error("Missing GROQ_API_KEY environment variable")
+        return "Server misconfiguration: missing API key."
 
+    logger.info("call_llama3_2 called with prompt length %d", len(prompt))
+    
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "model": GROQ_MODEL,
+        "messages": [
+            {"role": "user", "content": prompt}
+        ],
+        "temperature": 0.7,
+        "max_tokens": 1024
+    }
+
+    try:
+        response = requests.post(GROQ_API_URL, headers=headers, json=data, timeout=30)
+        if response.status_code != 200:
+            logger.error(f"Groq API error: {response.status_code} - {response.text}")
+            return f"Error from Groq API: {response.text}"
+        content = response.json()["choices"][0]["message"]["content"]
+        logger.info("Groq API response received")
+        return content.strip()
+    except Exception as e:
+        logger.exception("Exception calling Groq API")
+        return f"Exception: {str(e)}"
 
 @csrf_exempt
 def tutor_api_view(request):
@@ -55,26 +71,19 @@ def tutor_api_view(request):
                 return JsonResponse({"error": "Empty message"}, status=400)
 
             prompt = (
-                f"You are an expert algebraic geometry tutor AI. The user says: \"{user_message}\". "
+                f"The user says: \"{user_message}\". "
                 "Respond with deep technical knowledge, including precise mathematical definitions, formulas, "
                 "and examples when necessary. Use LaTeX notation when appropriate."
             )
 
-            logger.info(f"Prompt to LLaMA: {prompt[:100]}...")  # log first 100 chars
-
             response = call_llama3_2(prompt)
-
-            logger.info(f"Response from LLaMA: {response[:200]}...")  # first 200 chars
             return JsonResponse({"response": response})
         except Exception as e:
             logger.exception("Error processing tutor_api POST")
             return JsonResponse({"error": str(e)}, status=500)
     return JsonResponse({"error": "POST required"}, status=405)
 
-
-
 def tutor_page_view(request):
-    # Serve the chat page on GET
     return render(request, "tutor.html")
 
 
