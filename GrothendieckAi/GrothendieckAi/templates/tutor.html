@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Math Tutor Chat{% endblock %}
+{% block title %}LLM Chat{% endblock %}
 
 {% block content %}
 <h1>Chat with llama3.2</h1>
@@ -10,7 +10,7 @@
 
 <form id="chat-form" style="margin-top: 1rem;">
     {% csrf_token %}
-    <input type="text" id="user-input" autocomplete="off" placeholder="Ask your math question..." style="width: 80%;" />
+    <input type="text" id="user-input" autocomplete="off" placeholder="Ask your math question..." style="width: 80%;" required />
     <button type="submit">Send</button>
 </form>
 
@@ -26,15 +26,15 @@
         messageElem.style.padding = "0.5rem";
         messageElem.style.borderRadius = "6px";
         messageElem.style.whiteSpace = "pre-wrap";  // Preserve line breaks
+
         if (sender === "You") {
             messageElem.style.backgroundColor = "#d1e7dd";
             messageElem.style.textAlign = "right";
-            messageElem.innerHTML = `<strong>${sender}:</strong> ${text}`;
         } else {
             messageElem.style.backgroundColor = "#f8d7da";
             messageElem.style.textAlign = "left";
-            messageElem.innerHTML = `<strong>${sender}:</strong> ${text}`;
         }
+        messageElem.innerHTML = `<strong>${sender}:</strong> ${text}`;
         chatBox.appendChild(messageElem);
         chatBox.scrollTop = chatBox.scrollHeight;
     }
@@ -62,7 +62,7 @@
 
         addMessage("You", message);
         userInput.value = "";
-
+        
         // Add "Typing..." placeholder from Tutor
         addMessage("Tutor", "Typing...");
 
@@ -73,7 +73,7 @@
                     'Content-Type': 'application/json',
                     'X-CSRFToken': getCookie('csrftoken'),
                 },
-                body: JSON.stringify({message})
+                body: JSON.stringify({ message })
             });
 
             const data = await response.json();

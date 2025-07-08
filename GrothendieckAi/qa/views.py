@@ -28,16 +28,49 @@ def call_llama3_2(prompt: str) -> str:
             input=prompt,
             capture_output=True,
             text=True,
+            encoding="utf-8",
             timeout=300
         )
         if result.returncode != 0:
-            logger.error(f"Ollama CLI error: {result.stderr}")
+            logger.error(f"Ollama CLI error: {result.stderr.strip()}")
             return f"Error from LLaMA model: {result.stderr.strip()}"
         logger.info("Ollama CLI output length %d", len(result.stdout))
         return result.stdout.strip()
     except Exception as e:
         logger.exception("Exception running llama3.2 CLI")
         return f"Exception: {str(e)}"
+
+
+@csrf_exempt
+def tutor_api_view(request):
+    if request.method == "POST":
+        logger.info("Received POST to tutor_api")
+        try:
+            data = json.loads(request.body)
+            user_message = data.get('message', '').strip()
+            logger.info(f"User message: {user_message}")
+
+            if not user_message:
+                logger.warning("Empty message received")
+                return JsonResponse({"error": "Empty message"}, status=400)
+
+            prompt = (
+                f"You are an expert algebraic geometry tutor AI. The user says: \"{user_message}\". "
+                "Respond with deep technical knowledge, including precise mathematical definitions, formulas, "
+                "and examples when necessary. Use LaTeX notation when appropriate."
+            )
+
+            logger.info(f"Prompt to LLaMA: {prompt[:100]}...")  # log first 100 chars
+
+            response = call_llama3_2(prompt)
+
+            logger.info(f"Response from LLaMA: {response[:200]}...")  # first 200 chars
+            return JsonResponse({"response": response})
+        except Exception as e:
+            logger.exception("Error processing tutor_api POST")
+            return JsonResponse({"error": str(e)}, status=500)
+    return JsonResponse({"error": "POST required"}, status=405)
+
 
 
 def tutor_page_view(request):
@@ -82,39 +115,6 @@ def save_whiteboard(request):
         canvas_data = data.get('canvas_data')
         # Save canvas_data to database or file
         return JsonResponse({'status': 'success'})
-
-
-@csrf_exempt
-def tutor_api_view(request):
-    if request.method == "POST":
-        logger.info("Received POST to tutor_api")
-        try:
-            data = json.loads(request.body)
-            user_message = data.get('message', '').strip()
-            logger.info(f"User message: {user_message}")
-
-            if not user_message:
-                return JsonResponse({"error": "Empty message"}, status=400)
-
-            prompt = (
-                f"You are an expert algebraic geometry tutor AI. The user says: \"{user_message}\". "
-                "Respond with deep technical knowledge, including precise mathematical definitions, formulas, "
-                "and examples when necessary. Use LaTeX notation when appropriate."
-            )
-
-            # Call your llama3.2 subprocess function here:
-            response = call_llama3_2(prompt)
-
-            logger.info("Sending response from llama3.2")
-            return JsonResponse({"response": response})
-        except Exception as e:
-            logger.exception("Error processing tutor_api POST")
-            return JsonResponse({"error": str(e)}, status=500)
-
-    # If GET or other method:
-    return JsonResponse({"error": "POST required"}, status=405)
-
-
 
 def home_view(request):
     return render(request, 'home.html')
