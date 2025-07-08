@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Macaulay2 Executor{% endblock %}
+
+{% block content %}
+<h2>Macaulay2 Code Runner</h2>
+
+<textarea id="code-input" rows="10" style="width: 100%;" placeholder="Enter Macaulay2 code here...">R = QQ[a..c]; I = ideal(a^2 - b*c)</textarea>
+<br>
+<button onclick="runM2()">Run</button>
+
+<pre id="output" style="margin-top:1rem; background:#f8f9fa; padding:1rem; border:1px solid #ccc;"></pre>
+
+<script>
+    async function runM2() {
+        const code = document.getElementById("code-input").value;
+        const outputEl = document.getElementById("output");
+        outputEl.textContent = "⏳ Running...";
+
+        try {
+            const response = await fetch("{% url 'run_macaulay2' %}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": getCookie("csrftoken")
+                },
+                body: JSON.stringify({ code })
+            });
+
+            const data = await response.json();
+            outputEl.textContent = data.output || "⚠️ No output returned.";
+        } catch (err) {
+            outputEl.textContent = `❌ Error: ${err.message}`;
+        }
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                cookie = cookie.trim();
+                if (cookie.startsWith(name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %}

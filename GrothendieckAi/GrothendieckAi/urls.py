@@ -39,6 +39,9 @@ urlpatterns = [
     path('pdf/delete/<int:pk>/', delete_pdf, name='delete_pdf'),
     path('tutor/', tutor_page_view, name='tutor'),       # For GET — render the page
     path('tutor/api', tutor_api_view, name='tutor_api'), 
+    path('save-whiteboard/', views.save_whiteboard, name='save_whiteboard'),
+    path('macaulay2/', views.macaulay2_page, name='macaulay2_page'),
+    path('macaulay2/run/', views.run_macaulay2, name='run_macaulay2'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 if settings.DEBUG:

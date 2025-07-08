@@ -4,10 +4,34 @@
     <meta charset="UTF-8" />
     <title>{% block title %}Math QA{% endblock %}</title>
     <style>
-        body { font-family: 'Helvetica Neue', sans-serif; padding: 2rem; max-width: 800px; margin: auto; }
-        header { margin-bottom: 2rem; border-bottom: 1px solid #ccc; padding-bottom: 1rem; }
-        nav a { margin-right: 1rem; text-decoration: none; color: blue; font-weight: bold; }
-        nav form { display: inline; margin-left: 1rem; }
+        body { 
+            font-family: 'Helvetica Neue', sans-serif; 
+            padding: 2rem; 
+            max-width: 800px; 
+            margin: auto; 
+        }
+        header { 
+            margin-bottom: 2rem; 
+            border-bottom: 1px solid #ccc; 
+            padding-bottom: 1rem; 
+        }
+        nav {
+            display: flex;
+            flex-wrap: nowrap;
+            align-items: center;
+            gap: 1rem;
+        }
+        nav a, nav span, nav form {
+            white-space: nowrap;
+        }
+        nav form {
+            margin-left: auto; /* pushes the logout button to the far right */
+        }
+        nav a { 
+            text-decoration: none; 
+            color: blue; 
+            font-weight: bold; 
+        }
         nav button {
             background: none;
             border: none;
@@ -26,7 +50,8 @@
             {% if user.is_authenticated %}
                 <a href="{% url 'ask' %}">❓ Ask a Question</a>
                 <a href="{% url 'library' %}">📚 Library</a>
-                <a href="{% url 'tutor' %}">🤖 Math Tutor</a>
+                <a href="{% url 'tutor' %}">🤖 LLM Helper</a>
+                <a href="{% url 'macaulay2_page' %}">🧮 Macaulay2</a>
                 <a href="{% url 'history' %}">📜 History</a>
                 <span>Welcome, {{ user.username }}</span>
                 <form action="{% url 'logout' %}" method="post" style="display:inline;">

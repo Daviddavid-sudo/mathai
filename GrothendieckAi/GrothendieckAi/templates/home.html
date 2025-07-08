@@ -1,10 +1,51 @@
 <!-- templates/home.html -->
 {% extends "base.html" %}
 
-{% block title %}GrothendieckAI - Home{% endblock %}
-
 {% block content %}
 <h1>Welcome to GrothendieckAI</h1>
-<p>This tool allows you to ask questions from any PDF.</p>
 
+<!-- Whiteboard Canvas -->
+<canvas id="whiteboard" width="800" height="500" style="border:2px solid black; margin-top: 20px;"></canvas>
+<br>
+<button onclick="sendToServer()" style="margin-top: 10px;">Send to Math Solver</button>
+<button onclick="clearCanvas()" style="margin-top: 10px;">Clear</button>
+
+<!-- Load Fabric.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.2.4/fabric.min.js"></script>
+
+<script>
+  const canvas = new fabric.Canvas('whiteboard');
+
+  // Enable free drawing mode
+  canvas.isDrawingMode = true;
+
+  // Optional: Set brush options
+  canvas.freeDrawingBrush.width = 3;
+  canvas.freeDrawingBrush.color = "#000000";
+
+  function sendToServer() {
+    const dataURL = canvas.toDataURL('image/png');
+    fetch('/solve-math/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}'
+      },
+      body: JSON.stringify({ image: dataURL })
+    })
+    .then(response => response.json())
+    .then(data => {
+      alert("Detected: " + data.latex + "\nSolution: " + data.solution);
+    })
+    .catch(error => {
+      console.error('Error:', error);
+    });
+  }
+
+  function clearCanvas() {
+    canvas.clear();
+    canvas.isDrawingMode = true;
+  }
+</script>
 {% endblock %}
+

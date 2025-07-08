@@ -1,0 +1,19 @@
+<canvas id="whiteboard" width="800" height="600" style="border:1px solid #000"></canvas>
+<button onclick="saveCanvas()">Save</button>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.2.4/fabric.min.js"></script>
+<script>
+  const canvas = new fabric.Canvas('whiteboard');
+
+  function saveCanvas() {
+    const data = JSON.stringify(canvas);
+    fetch('/save-whiteboard/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}',
+      },
+      body: JSON.stringify({canvas_data: data})
+    }).then(res => alert("Saved!"));
+  }
+</script>

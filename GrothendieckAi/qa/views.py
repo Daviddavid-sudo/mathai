@@ -45,6 +45,45 @@ def tutor_page_view(request):
     return render(request, "tutor.html")
 
 
+def macaulay2_page(request):
+    return render(request, 'macaulay2.html')
+
+
+@csrf_exempt
+def run_macaulay2(request):
+    if request.method == 'POST':
+        try:
+            import json
+            data = json.loads(request.body)
+            code = data.get('code', '')
+            if not code.strip():
+                return JsonResponse({'output': '⚠️ No code submitted.'}, status=400)
+
+            result = subprocess.run(
+                ["M2", "--no-debug", "--silent"],
+                input=code.encode(),
+                capture_output=True,
+                timeout=10
+            )
+
+            output = result.stdout.decode().strip()
+            error = result.stderr.decode().strip()
+
+            return JsonResponse({'output': output if output else error})
+        except Exception as e:
+            return JsonResponse({'output': f'❌ Error: {e}'}, status=500)
+    return JsonResponse({'output': 'Only POST allowed'}, status=405)
+
+
+@csrf_exempt
+def save_whiteboard(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        canvas_data = data.get('canvas_data')
+        # Save canvas_data to database or file
+        return JsonResponse({'status': 'success'})
+
+
 @csrf_exempt
 def tutor_api_view(request):
     if request.method == "POST":
