@@ -4,10 +4,75 @@
 {% block content %}
 <h1>Chat with llama3.2</h1>
 
+<!-- Image Selection -->
+{% if photos %}
+    <h3>Select an image to ask about:</h3>
+    <select id="image-selector" style="margin-bottom: 1rem;">
+        <option value="" data-url="">-- No image selected --</option>
+        {% for photo in photos %}
+            <option value="{{ photo.id }}" data-url="{{ photo.image.url }}">
+                {{ photo.image.name }}
+            </option>
+        {% endfor %}
+    </select>
+
+    <!-- Initially hidden image preview -->
+    <img id="selected-image-preview"
+         src=""
+         alt="Selected image"
+         style="max-width: 1000px; display: none; margin-bottom: 1rem;" />
+{% else %}
+    <p>No uploaded images available.</p>
+{% endif %}
+
+<!-- Whiteboard Canvas -->
+<canvas id="whiteboard" width="800" height="500" style="border:2px solid black; margin-top: 20px;"></canvas>
+<br>
+<button onclick="sendToServer()" style="margin-top: 10px;">Send to Math Solver</button>
+<button onclick="clearCanvas()" style="margin-top: 10px;">Clear</button>
+
+<!-- Load Fabric.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.2.4/fabric.min.js"></script>
+
+<script>
+  const canvas = new fabric.Canvas('whiteboard');
+
+  // Enable free drawing mode
+  canvas.isDrawingMode = true;
+  canvas.freeDrawingBrush.width = 3;
+  canvas.freeDrawingBrush.color = "#000000";
+
+  function sendToServer() {
+    const dataURL = canvas.toDataURL('image/png');
+    fetch('/solve-math/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}'
+      },
+      body: JSON.stringify({ image: dataURL })
+    })
+    .then(response => response.json())
+    .then(data => {
+      alert("Detected: " + data.latex + "\nSolution: " + data.solution);
+    })
+    .catch(error => {
+      console.error('Error:', error);
+    });
+  }
+
+  function clearCanvas() {
+    canvas.clear();
+    canvas.isDrawingMode = true;
+  }
+</script>
+
+<!-- Chat box -->
 <div id="chat-box" style="border:1px solid #ccc; padding: 1rem; height: 400px; overflow-y: auto; background:#f9f9f9;">
     <!-- Messages will appear here -->
 </div>
 
+<!-- Chat form -->
 <form id="chat-form" style="margin-top: 1rem;">
     {% csrf_token %}
     <input type="text" id="user-input" autocomplete="off" placeholder="Ask your math question..." style="width: 80%;" required />
@@ -18,28 +83,46 @@
     const chatBox = document.getElementById('chat-box');
     const chatForm = document.getElementById('chat-form');
     const userInput = document.getElementById('user-input');
+    const imageSelector = document.getElementById('image-selector');
+    const imagePreview = document.getElementById('selected-image-preview');
 
-    // Function to add a message to chat box
+    // Update image preview when selection changes
+    if (imageSelector) {
+        imageSelector.addEventListener('change', () => {
+            const selectedOption = imageSelector.options[imageSelector.selectedIndex];
+            const imageUrl = selectedOption.getAttribute('data-url');
+
+            if (imageUrl) {
+                imagePreview.src = imageUrl;
+                imagePreview.style.display = "block";
+            } else {
+                imagePreview.style.display = "none";
+            }
+        });
+    }
+
+    // Add message to chat box
     function addMessage(sender, text) {
         const messageElem = document.createElement('div');
         messageElem.style.margin = "0.5rem 0";
         messageElem.style.padding = "0.5rem";
         messageElem.style.borderRadius = "6px";
-        messageElem.style.whiteSpace = "pre-wrap";  // Preserve line breaks
+        messageElem.style.whiteSpace = "pre-wrap";
 
         if (sender === "You") {
             messageElem.style.backgroundColor = "#d1e7dd";
             messageElem.style.textAlign = "right";
         } else {
-            messageElem.style.backgroundColor = "#f8d7da";
+            messageElem.style.backgroundColor = "#d1ecf1";
             messageElem.style.textAlign = "left";
         }
+
         messageElem.innerHTML = `<strong>${sender}:</strong> ${text}`;
         chatBox.appendChild(messageElem);
         chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    // Get CSRF token from cookies
+    // CSRF helper
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
@@ -55,6 +138,7 @@
         return cookieValue;
     }
 
+    // Submit chat message
     chatForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const message = userInput.value.trim();
@@ -62,8 +146,7 @@
 
         addMessage("You", message);
         userInput.value = "";
-        
-        // Add "Typing..." placeholder from Tutor
+
         addMessage("Tutor", "Typing...");
 
         try {
@@ -73,16 +156,20 @@
                     'Content-Type': 'application/json',
                     'X-CSRFToken': getCookie('csrftoken'),
                 },
-                body: JSON.stringify({ message })
+                body: JSON.stringify({
+                    message: message,
+                    image_id: imageSelector ? imageSelector.value : null
+                })
             });
 
             const data = await response.json();
+            const tutorResponse = data.response || data.error || 'No response';
 
-            // Replace "Typing..." with actual response or error
-            chatBox.lastChild.innerHTML = `<strong>Tutor:</strong> <pre>${data.response || data.error || 'No response'}</pre>`;
+            chatBox.lastChild.innerHTML = `<strong>Tutor:</strong> <pre>${tutorResponse}</pre>`;
         } catch (err) {
             chatBox.lastChild.innerHTML = `<strong>Tutor:</strong> Error: ${err.message}`;
         }
     });
 </script>
+
 {% endblock %}

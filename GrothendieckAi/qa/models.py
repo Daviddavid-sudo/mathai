@@ -19,3 +19,8 @@ class PDFDocument(models.Model):
 
     def __str__(self):
         return self.title
+    
+
+class UploadedPhoto(models.Model):
+    image = models.ImageField(upload_to='photos/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)

@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from qa.views import math_qa_view, history_view, home_view, library_view, delete_pdf, tutor_page_view, tutor_api_view
+from qa.views import math_qa_view, history_view, home_view, library_view, delete_pdf, tutor_page_view, tutor_api_view, delete_photo
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
@@ -28,7 +28,7 @@ from django.contrib.auth.views import LogoutView
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', home_view, name='home'),
-    path('ask/', math_qa_view, name='ask'),
+    path('search/', math_qa_view, name='search'),
     path('library/', library_view, name='library'),
     path('history/', history_view, name='history'),
     path('login/', auth_views.LoginView.as_view(), name='login'),
@@ -37,6 +37,7 @@ urlpatterns = [
     path('history/edit/<int:pk>/', views.edit_question_history, name='edit_history'),
     path('history/delete/<int:pk>/', views.delete_question_history, name='delete_history'),
     path('pdf/delete/<int:pk>/', delete_pdf, name='delete_pdf'),
+    path('delete-photo/<int:pk>/', delete_photo, name='delete_photo'),
     path('tutor/', tutor_page_view, name='tutor'),       # For GET — render the page
     path('tutor/api/', tutor_api_view, name='tutor_api'),
     path('save-whiteboard/', views.save_whiteboard, name='save_whiteboard'),

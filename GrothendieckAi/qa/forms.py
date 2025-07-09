@@ -1,5 +1,6 @@
 from django import forms
-from .models import PDFDocument, QuestionHistory
+from .models import PDFDocument, QuestionHistory, UploadedPhoto
+
 
 class QuestionHistoryForm(forms.ModelForm):
     class Meta:
@@ -14,3 +15,9 @@ class PDFUploadForm(forms.ModelForm):
     class Meta:
         model = PDFDocument
         fields = ['title', 'file']
+
+
+class PhotoUploadForm(forms.ModelForm):
+    class Meta:
+        model = UploadedPhoto
+        fields = ['image']

@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect
 from GrothendieckAi.utils.query_llama import answer_question_for_pdf
-from qa.models import QuestionHistory, PDFDocument
-from qa.forms import PDFUploadForm, QuestionHistoryForm
+from qa.models import QuestionHistory, PDFDocument, UploadedPhoto
+from qa.forms import PDFUploadForm, QuestionHistoryForm, PhotoUploadForm
 import os
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
@@ -16,6 +16,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render
 from dotenv import load_dotenv
 import subprocess
+
 
 load_dotenv()
 
@@ -84,8 +85,10 @@ def tutor_api_view(request):
             return JsonResponse({"error": str(e)}, status=500)
     return JsonResponse({"error": "POST required"}, status=405)
 
+
 def tutor_page_view(request):
-    return render(request, "tutor.html")
+    photos = UploadedPhoto.objects.all().order_by('-uploaded_at')
+    return render(request, "tutor.html", {"photos": photos})
 
 
 def macaulay2_page(request):
@@ -180,23 +183,45 @@ def math_qa_view(request):
 
 
 def library_view(request):
+    pdf_form = PDFUploadForm()
+    image_form = PhotoUploadForm()
+
     if request.method == 'POST':
-        form = PDFUploadForm(request.POST, request.FILES)
-        if form.is_valid():
-            pdf = form.save()
-            pdf_path = os.path.join(settings.MEDIA_ROOT, str(pdf.file))
-            try:
-                process_pdf(pdf_path)
-                messages.success(request, "PDF uploaded and processed successfully.")
-            except Exception as e:
-                messages.error(request, f"Error processing PDF: {e}")
-                pdf.delete()  # Optional: remove broken upload
-            return redirect('library')
-    else:
-        form = PDFUploadForm()
+        if 'upload_pdf' in request.POST:
+            pdf_form = PDFUploadForm(request.POST, request.FILES)
+            if pdf_form.is_valid():
+                pdf_form.save()
+                return redirect('library')
+        elif 'upload_image' in request.POST:
+            image_form = PhotoUploadForm(request.POST, request.FILES)
+            if image_form.is_valid():
+                image_form.save()
+                return redirect('library')
 
     pdfs = PDFDocument.objects.all().order_by('-uploaded_at')
-    return render(request, 'library.html', {'form': form, 'pdfs': pdfs})
+    photos = UploadedPhoto.objects.all().order_by('-uploaded_at')
+
+    return render(request, 'library.html', {
+        'pdf_form': pdf_form,
+        'image_form': image_form,
+        'pdfs': pdfs,
+        'photos': photos,
+    })
+
+
+def delete_photo(request, pk):
+    photo = get_object_or_404(UploadedPhoto, pk=pk)
+    if request.method == 'POST':
+        if photo.image and photo.image.path:
+            try:
+                os.remove(photo.image.path)
+            except Exception as e:
+                print(f"Failed to delete photo file: {e}")
+        photo.delete()
+        return redirect('library')
+
+    return render(request, 'delete_photo.html', {'photo': photo})
+
 
 
 @login_required
